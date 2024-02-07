@@ -23,6 +23,11 @@ object "ERC1155" {
           returnEmpty()
       }
 
+      case 0xb48ab8b6 /* "batchMint(address,uint[],uint[],bytes)" */ {
+          _batchMint()
+          returnEmpty()
+      }
+
       // case 0xb390c0ab /* "burn(uint256,uint256)" */ {
       //     // burn msg.sender, id, amount
       //     _burn(caller(), decodeAsUint(0), decodeAsUint(1))
@@ -51,6 +56,32 @@ object "ERC1155" {
           emitTransferSingle(caller(), 0x0, to, id, amount)
           // If the recipient is a contract, we call onERC1155Received
           _doSafeTransferAcceptanceCheck(caller(), 0x0, to, id, amount)
+      }
+
+      function _batchMint() {
+          let to := decodeAsAddress(0)
+          let idsOffset := decodeAsUint(1)
+          let amountsOffset := decodeAsUint(2)
+          let dataOffset := decodeAsUint(3)
+          let idsLength := calldataload(add(idsOffset, 0x04))
+          let idsStart := add(idsOffset, 0x24)
+          let amountsLength := calldataload(add(amountsOffset, 0x04))
+          let amountsStart := add(amountsOffset, 0x24)
+          let dataStart := add(dataOffset, 0x04)
+
+          notZeroAddress(to)
+          // Check that length of ids and amounts is the same
+          require(eq(idsLength, amountsLength))
+
+          for { let i := 0 } lt(i, idsLength) { i := add(i, 0x01) } {
+              addBalanceOf(
+                to,
+                calldataload(add(idsStart, mul(i, 0x20))),
+                calldataload(add(amountsStart, mul(i, 0x20)))
+              )
+          }
+
+          emitTransferBatch(caller(), 0x0, to)
       }
 
       function _burn(from, id, amount) {
@@ -273,6 +304,22 @@ object "ERC1155" {
               0x00, // Memory location where non-indexed args are stored
               0x40,
               0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62 /* "TransferSingle(address,address,address,uint256,uint256)" */,
+              operator, // indexed arg
+              from, // indexed arg
+              to // indexed arg
+          )
+      }
+
+      // calldatacopy(0xa4, dataStartPos, sub(calldatasize(), dataStartPos))
+
+      function emitTransferBatch(operator, from, to) {
+          // how to dynamically load calldata into memory? calldatacopy?
+          calldatacopy(0x00, 0x24, sub(calldatasize(), 0x24)) // 0x24 to exclude selector and address arg
+
+          log4(
+              0x00, // Memory location where non-indexed args are stored
+              sub(calldatasize(), 0x24),
+              0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb /* keccak "TransferBatch(address,address,address,uint256[],uint256[])" */,
               operator, // indexed arg
               from, // indexed arg
               to // indexed arg

@@ -115,7 +115,7 @@ contract NonERC1155Recipient {}
 
 interface IERC1155 {
     function mint(address to, uint256 id, uint256 amount, bytes calldata data) external;
-    // function batchMint(address to, uint256[] calldata ids, uint256[] calldata amounts, bytes calldata data) external;
+    function batchMint(address to, uint256[] calldata ids, uint256[] calldata amounts, bytes calldata data) external;
     function burn(address from, uint256 id, uint256 amount) external;
     // function batchBurn(address from, uint256[] calldata ids, uint256[] calldata amounts) external;
     // function setApprovalForAll(address operator, bool approved) external;
@@ -157,29 +157,29 @@ contract ERC1155Test is DSTestPlus, DSInvariantTest {
         assertBytesEq(to.mintData(), "testing 123");
     }
 
-    // function testBatchMintToEOA() public {
-    //     uint256[] memory ids = new uint256[](5);
-    //     ids[0] = 1337;
-    //     ids[1] = 1338;
-    //     ids[2] = 1339;
-    //     ids[3] = 1340;
-    //     ids[4] = 1341;
+    function testBatchMintToEOA() public {
+        uint256[] memory ids = new uint256[](5);
+        ids[0] = 1337;
+        ids[1] = 1338;
+        ids[2] = 1339;
+        ids[3] = 1340;
+        ids[4] = 1341;
 
-    //     uint256[] memory amounts = new uint256[](5);
-    //     amounts[0] = 100;
-    //     amounts[1] = 200;
-    //     amounts[2] = 300;
-    //     amounts[3] = 400;
-    //     amounts[4] = 500;
+        uint256[] memory amounts = new uint256[](5);
+        amounts[0] = 100;
+        amounts[1] = 200;
+        amounts[2] = 300;
+        amounts[3] = 400;
+        amounts[4] = 500;
 
-    //     token.batchMint(address(0xBEEF), ids, amounts, "");
+        token.batchMint(address(0xBEEF), ids, amounts, "");
 
-    //     assertEq(token.balanceOf(address(0xBEEF), 1337), 100);
-    //     assertEq(token.balanceOf(address(0xBEEF), 1338), 200);
-    //     assertEq(token.balanceOf(address(0xBEEF), 1339), 300);
-    //     assertEq(token.balanceOf(address(0xBEEF), 1340), 400);
-    //     assertEq(token.balanceOf(address(0xBEEF), 1341), 500);
-    // }
+        assertEq(token.balanceOf(address(0xBEEF), 1337), 100);
+        assertEq(token.balanceOf(address(0xBEEF), 1338), 200);
+        assertEq(token.balanceOf(address(0xBEEF), 1339), 300);
+        assertEq(token.balanceOf(address(0xBEEF), 1340), 400);
+        assertEq(token.balanceOf(address(0xBEEF), 1341), 500);
+    }
 
     // function testBatchMintToERC1155Recipient() public {
     //     ERC1155Recipient to = new ERC1155Recipient();
