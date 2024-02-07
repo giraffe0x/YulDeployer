@@ -105,17 +105,23 @@ object "ERC1155" {
           notZeroAddress(to)
           require(eq(idsLength, amountsLength))
 
+          let idPos := idsStartPos
+          let amountPos := amountsStartPos
+
           for { let i := 0 } lt(i, idsLength) { i := add(i, 0x01) } {
+              idPos := add(idPos, 0x20) // add 0x20 to get first id after length
+              amountPos := add(amountPos, 0x20) // add 0x20 to get first amount after length
+
               addBalanceOf(
                 to,
-                calldataload(add(idsStartPos, mul(i, 0x20))),
-                calldataload(add(amountsStartPos, mul(i, 0x20)))
+                calldataload(idPos),
+                calldataload(amountPos)
               )
           }
 
           emitTransferBatch(caller(), 0x0, to)
 
-          _doBatchSafeTransferAcceptanceCheck(caller(), 0x0, to, dataOffset, dataStartPos)
+          _doBatchSafeTransferAcceptanceCheck(caller(), 0x0, to, idsStartPos, idsLength, amountsLength)
       }
 
       function _burn(from, id, amount) {
@@ -128,18 +134,17 @@ object "ERC1155" {
           emitTransferSingle(caller(), from, 0x0, id, amount)
       }
 
-      function _doBatchSafeTransferAcceptanceCheck(operator, from, to, dataOffset, dataStartPos) {
+      function _doBatchSafeTransferAcceptanceCheck(operator, from, to, idsStartPos, idsLength, amountsLength) {
           if isContract(to) {
               let onERC1155BatchReceivedSelector := 0xbc197c8100000000000000000000000000000000000000000000000000000000
-
-              let idsAmountsLength := sub(calldatasize(), 0x24)
 
               mstore(0, onERC1155BatchReceivedSelector)
               mstore(0x04, operator)
               mstore(0x24, from)
-              calldatacopy(0x44, 0x24, idsAmountsLength) // copy ids and amounts
-              mstore(add(0x44, idsAmountsLength), dataOffset) // store bytes starting position
-              calldatacopy(add(0x64, idsAmountsLength), dataStartPos, sub(calldatasize(), dataStartPos)) // copy data
+              mstore(0x44, 0xa0) // 1st offset will be 5th word of calldata because 2 addresses + 2 uint array + 1 data
+              mstore(0x64, add(0xc0, mul(idsLength, 0x20))) // offset for 2nd array
+              mstore(0x84, add(0xe0, mul(add(idsLength, amountsLength), 0x20))) // offset for data
+              calldatacopy(0xa4, idsStartPos, sub(calldatasize(), idsStartPos)) // idsStartPos == 0x84 (after selectors + 1 x addr + 3 x offset)
 
               let success := call(
                   gas(),
