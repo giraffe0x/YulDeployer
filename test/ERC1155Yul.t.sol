@@ -436,9 +436,9 @@ contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
     //     assertEq(balances[4], 500);
     // }
 
-    // function testFailMintToZero() public {
-    //     token.mint(address(0), 1337, 1, "");
-    // }
+    function testFailMintToZero() public {
+        token.mint(address(0), 1337, 1, "");
+    }
 
     function testFailMintToNonERC155Recipient() public {
         token.mint(address(new NonERC1155Recipient()), 1337, 1, "");
