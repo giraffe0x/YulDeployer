@@ -68,7 +68,35 @@ object "ERC1155" {
           returnUint(balanceOf(decodeAsAddress(0), decodeAsUint(1)))
       }
 
-      
+      case 0x4e1273f4 /* "balanceOfBatch(address[],uint[])" */ {
+          // balanceOfBatch(addresses, ids)
+          let addressesOffset := decodeAsUint(0)
+          let idsOffset := decodeAsUint(1)
+
+          let addressesStartPos := add(addressesOffset, 0x04)
+          let addressesLength := calldataload(addressesStartPos)
+
+          let idsStartPos := add(idsOffset, 0x04)
+          let idsLength := calldataload(idsStartPos)
+
+          require(eq(addressesLength, idsLength))
+
+          let addressPos := addressesStartPos
+          let idPos := idsStartPos
+
+          mstore(0x100, 0x20) // store offset
+          mstore(0x120, idsLength) // store length of return array
+          let x := 0
+
+          for { let i := 0 } lt(i, idsLength) { i := add(i, 0x01) } {
+              addressPos := add(addressPos, 0x20)
+              idPos := add(idPos, 0x20)
+              x := balanceOf(calldataload(addressPos), calldataload(idPos))
+              mstore(add(0x140, mul(i, 0x20)), x)
+          }
+
+          return(0x100, add(0x40, mul(idsLength, 0x20))) // return offset + len + elements
+      }
 
       case 0xe985e9c5 /* "isApprovedForAll(address,address)" */ {
           returnUint(isApprovedForAll(decodeAsAddress(0), decodeAsAddress(1)))
