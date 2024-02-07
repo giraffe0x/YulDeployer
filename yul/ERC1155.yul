@@ -40,6 +40,12 @@ object "ERC1155" {
           returnEmpty()
       }
 
+      case 0xf6eb127a /* "batchBurn(address,uint[],uint[])" */ {
+          // burn from, ids, amounts
+          _batchBurn()
+          returnEmpty()
+      }
+
       case 0xa22cb465 /* "setApprovalForAll(address,bool)" */ {
           // setApprovalForAll operator, approved
           sstore(getNestedMappingValuePos(allowanceSlot(), caller(), decodeAsAddress(0)), decodeAsUint(1))
@@ -132,6 +138,38 @@ object "ERC1155" {
           subBalanceOf(from, id, amount)
           // Emit Transfer event
           emitTransferSingle(caller(), from, 0x0, id, amount)
+      }
+
+      function _batchBurn() {
+          let from := decodeAsAddress(0)
+          notZeroAddress(from)
+          
+          let idsOffset := decodeAsUint(1)
+          let amountsOffset := decodeAsUint(2)
+
+          let idsStartPos := add(idsOffset, 0x04)
+          let idsLength := calldataload(idsStartPos)
+
+          let amountsStartPos := add(amountsOffset, 0x04)
+          let amountsLength := calldataload(amountsStartPos)
+
+          require(eq(idsLength, amountsLength))
+
+          let idPos := idsStartPos
+          let amountPos := amountsStartPos
+
+          for { let i := 0 } lt(i, idsLength) { i := add(i, 0x01) } {
+              idPos := add(idPos, 0x20) // add 0x20 to get first id after length
+              amountPos := add(amountPos, 0x20) // add 0x20 to get first amount after length
+
+              subBalanceOf(
+                from,
+                calldataload(idPos),
+                calldataload(amountPos)
+              )
+          }
+
+          emitTransferBatch(caller(), from, 0x0)
       }
 
       function _doBatchSafeTransferAcceptanceCheck(operator, from, to, idsStartPos, idsLength, amountsLength) {
