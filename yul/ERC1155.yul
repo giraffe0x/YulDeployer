@@ -49,6 +49,7 @@ object "ERC1155" {
       case 0xa22cb465 /* "setApprovalForAll(address,bool)" */ {
           // setApprovalForAll operator, approved
           sstore(getNestedMappingValuePos(allowanceSlot(), caller(), decodeAsAddress(0)), decodeAsUint(1))
+          emitApprovalForAll(caller(), decodeAsAddress(0), decodeAsUint(1))
           returnEmpty()
       }
 
@@ -64,6 +65,8 @@ object "ERC1155" {
       }
 
       // View functions
+      case 
+
       case 0x00fdd58e /* "balanceOf(address,uint256)" */ {
           returnUint(balanceOf(decodeAsAddress(0), decodeAsUint(1)))
       }
@@ -529,10 +532,16 @@ object "ERC1155" {
           )
       }
 
-
-
-
-
+      function emitApprovalForAll(owner, operator, approved) {
+          mstore(0, approved)
+          log3(
+              0x00, // Memory location where non-indexed args are stored
+              0x20,
+              0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31 /* keccak "ApprovalForAll(address,address,bool)" */,
+              owner, // indexed arg
+              operator // indexed arg
+          )
+      }
     }
   }
 }

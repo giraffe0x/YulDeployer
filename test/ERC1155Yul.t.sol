@@ -319,6 +319,17 @@ contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
         token.batchMint(address(0xBEEF), ids, amounts, "");
     }
 
+    function testEmitApprovalForAll() public {
+        hevm.expectEmit(true, true, true, true);
+
+        emit IERC1155.ApprovalForAll(
+            address(this),
+            address(0xBEEF),
+            true);
+
+        token.setApprovalForAll(address(0xBEEF), true);
+    }
+
     function testSafeTransferFromToEOA() public {
         address from = address(0xABCD);
 
