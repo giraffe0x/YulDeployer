@@ -18,9 +18,20 @@ object "ERC1155" {
       // External functions
       case 0x731133e9 /* "mint(address,uint256,uint256,bytes)" */ {
           // TODO add only owner check?
-
           // mint to, id, amount, data
-          mint(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2), decodeAsUint(3))
+          _mint(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2), decodeAsUint(3))
+          returnEmpty()
+      }
+
+      // case 0xb390c0ab /* "burn(uint256,uint256)" */ {
+      //     // burn msg.sender, id, amount
+      //     _burn(caller(), decodeAsUint(0), decodeAsUint(1))
+      //     returnEmpty()
+      // }
+
+      case 0xf5298aca /* "burn(address,uint256,uint256)" */ {
+          // burn from, id, amount
+          _burn(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2))
           returnEmpty()
       }
 
@@ -29,8 +40,9 @@ object "ERC1155" {
           returnUint(balanceOf(decodeAsAddress(0), decodeAsUint(1)))
       }
 
-      //? Is this an internal function? Yes because it's not in the dispatcher
-      function mint(to, id, amount, dataOffset) {
+      // Internal functions
+
+      function _mint(to, id, amount, dataOffset) {
           // Check that it is not to address(0)
           notZeroAddress(to)
           // Add to balanceOf, checking for overflow
@@ -41,8 +53,15 @@ object "ERC1155" {
           _doSafeTransferAcceptanceCheck(caller(), 0x0, to, id, amount)
       }
 
-
-      /* --- safe transfer --- */
+      function _burn(from, id, amount) {
+          // Check that it is not from address(0)
+          notZeroAddress(from)
+          // Need to check that the caller is the owner of the token? No need because non-existent token balance should underflow
+          // Sub from balanceOf, checking for underflow
+          subBalanceOf(from, id, amount)
+          // Emit Transfer event
+          emitTransferSingle(caller(), from, 0x0, id, amount)
+      }
 
       function _doSafeTransferAcceptanceCheck(operator, from, to, id, amount) {
           if isContract(to) {
@@ -130,6 +149,13 @@ object "ERC1155" {
           let valuePos := getNestedMappingValuePos(balanceOfSlot(), to, id)
           // Set new value, checking for overflow
           sstore(valuePos, safeAdd(sload(valuePos), amount))
+      }
+
+      function subBalanceOf(from, id, amount) {
+          // Get current position
+          let valuePos := getNestedMappingValuePos(balanceOfSlot(), from, id)
+          // Set new value, checking for underflow
+          sstore(valuePos, safeSub(sload(valuePos), amount))
       }
 
       // owner => id => balance
@@ -226,31 +252,6 @@ object "ERC1155" {
 
       function isContract(a) -> c {
           c := gt(extcodesize(a), 0)
-      }
-
-      /* --- external call functions --- */
-      function externalViewCallNoArgs(a, s) -> r {
-          // Do we need to load selector into memory?
-
-          // Get location of free memory pointer
-          let x:= mload(0x40)
-          // Store selector at free memory pointer
-          mstore(x, s)
-
-          let success := staticcall(
-            gas(),
-            a, // to
-            0, // no input
-            x, // Inputs stored at location x
-            x, // Write output over input (saves space?)
-            0x20 // Output size
-          )
-
-          if iszero(success) {
-              revert(0x00, 0x00)
-          }
-
-          r := mload(x)
       }
 
       /* --- events functions --- */

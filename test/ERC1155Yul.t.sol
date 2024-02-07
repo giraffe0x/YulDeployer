@@ -67,56 +67,56 @@ contract ERC1155Recipient is ERC1155TokenReceiver {
     }
 }
 
-// contract RevertingERC1155Recipient is ERC1155TokenReceiver {
-//     function onERC1155Received(
-//         address,
-//         address,
-//         uint256,
-//         uint256,
-//         bytes calldata
-//     ) public pure override returns (bytes4) {
-//         revert(string(abi.encodePacked(ERC1155TokenReceiver.onERC1155Received.selector)));
-//     }
+contract RevertingERC1155Recipient is ERC1155TokenReceiver {
+    function onERC1155Received(
+        address,
+        address,
+        uint256,
+        uint256,
+        bytes calldata
+    ) public pure override returns (bytes4) {
+        revert(string(abi.encodePacked(ERC1155TokenReceiver.onERC1155Received.selector)));
+    }
 
-//     function onERC1155BatchReceived(
-//         address,
-//         address,
-//         uint256[] calldata,
-//         uint256[] calldata,
-//         bytes calldata
-//     ) external pure override returns (bytes4) {
-//         revert(string(abi.encodePacked(ERC1155TokenReceiver.onERC1155BatchReceived.selector)));
-//     }
-// }
+    function onERC1155BatchReceived(
+        address,
+        address,
+        uint256[] calldata,
+        uint256[] calldata,
+        bytes calldata
+    ) external pure override returns (bytes4) {
+        revert(string(abi.encodePacked(ERC1155TokenReceiver.onERC1155BatchReceived.selector)));
+    }
+}
 
-// contract WrongReturnDataERC1155Recipient is ERC1155TokenReceiver {
-//     function onERC1155Received(
-//         address,
-//         address,
-//         uint256,
-//         uint256,
-//         bytes calldata
-//     ) public pure override returns (bytes4) {
-//         return 0xCAFEBEEF;
-//     }
+contract WrongReturnDataERC1155Recipient is ERC1155TokenReceiver {
+    function onERC1155Received(
+        address,
+        address,
+        uint256,
+        uint256,
+        bytes calldata
+    ) public pure override returns (bytes4) {
+        return 0xCAFEBEEF;
+    }
 
-//     function onERC1155BatchReceived(
-//         address,
-//         address,
-//         uint256[] calldata,
-//         uint256[] calldata,
-//         bytes calldata
-//     ) external pure override returns (bytes4) {
-//         return 0xCAFEBEEF;
-//     }
-// }
+    function onERC1155BatchReceived(
+        address,
+        address,
+        uint256[] calldata,
+        uint256[] calldata,
+        bytes calldata
+    ) external pure override returns (bytes4) {
+        return 0xCAFEBEEF;
+    }
+}
 
-// contract NonERC1155Recipient {}
+contract NonERC1155Recipient {}
 
 interface IERC1155 {
     function mint(address to, uint256 id, uint256 amount, bytes calldata data) external;
     // function batchMint(address to, uint256[] calldata ids, uint256[] calldata amounts, bytes calldata data) external;
-    // function burn(address from, uint256 id, uint256 amount) external;
+    function burn(address from, uint256 id, uint256 amount) external;
     // function batchBurn(address from, uint256[] calldata ids, uint256[] calldata amounts) external;
     // function setApprovalForAll(address operator, bool approved) external;
     // function isApprovedForAll(address owner, address operator) external view returns (bool);
@@ -213,13 +213,13 @@ contract ERC1155Test is DSTestPlus, DSInvariantTest {
     //     assertEq(token.balanceOf(address(to), 1341), 500);
     // }
 
-    // function testBurn() public {
-    //     token.mint(address(0xBEEF), 1337, 100, "");
+    function testBurn() public {
+        token.mint(address(0xBEEF), 1337, 100, "");
 
-    //     token.burn(address(0xBEEF), 1337, 70);
+        token.burn(address(0xBEEF), 1337, 70);
 
-    //     assertEq(token.balanceOf(address(0xBEEF), 1337), 30);
-    // }
+        assertEq(token.balanceOf(address(0xBEEF), 1337), 30);
+    }
 
     // function testBatchBurn() public {
     //     uint256[] memory ids = new uint256[](5);
@@ -440,22 +440,22 @@ contract ERC1155Test is DSTestPlus, DSInvariantTest {
     //     token.mint(address(0), 1337, 1, "");
     // }
 
-    // function testFailMintToNonERC155Recipient() public {
-    //     token.mint(address(new NonERC1155Recipient()), 1337, 1, "");
-    // }
+    function testFailMintToNonERC155Recipient() public {
+        token.mint(address(new NonERC1155Recipient()), 1337, 1, "");
+    }
 
-    // function testFailMintToRevertingERC155Recipient() public {
-    //     token.mint(address(new RevertingERC1155Recipient()), 1337, 1, "");
-    // }
+    function testFailMintToRevertingERC155Recipient() public {
+        token.mint(address(new RevertingERC1155Recipient()), 1337, 1, "");
+    }
 
-    // function testFailMintToWrongReturnDataERC155Recipient() public {
-    //     token.mint(address(new RevertingERC1155Recipient()), 1337, 1, "");
-    // }
+    function testFailMintToWrongReturnDataERC155Recipient() public {
+        token.mint(address(new RevertingERC1155Recipient()), 1337, 1, "");
+    }
 
-    // function testFailBurnInsufficientBalance() public {
-    //     token.mint(address(0xBEEF), 1337, 70, "");
-    //     token.burn(address(0xBEEF), 1337, 100);
-    // }
+    function testFailBurnInsufficientBalance() public {
+        token.mint(address(0xBEEF), 1337, 70, "");
+        token.burn(address(0xBEEF), 1337, 100);
+    }
 
     // function testFailSafeTransferFromInsufficientBalance() public {
     //     address from = address(0xABCD);
