@@ -57,10 +57,18 @@ object "ERC1155" {
           returnEmpty()
       }
 
+      case 0x2eb2c2d6 /* "safeBatchTransferFrom(address,address,uint[],uint[],bytes)" */ {
+          // safeBatchTransferFrom(from, to, ids, amounts, data)
+          _safeBatchTransferFrom()
+          returnEmpty()
+      }
+
       // View functions
       case 0x00fdd58e /* "balanceOf(address,uint256)" */ {
           returnUint(balanceOf(decodeAsAddress(0), decodeAsUint(1)))
       }
+
+      
 
       case 0xe985e9c5 /* "isApprovedForAll(address,address)" */ {
           returnUint(isApprovedForAll(decodeAsAddress(0), decodeAsAddress(1)))
@@ -81,6 +89,49 @@ object "ERC1155" {
           emitTransferSingle(caller(), from, to, id, amount)
           // If the recipient is a contract, we call onERC1155Received
           _doSafeTransferAcceptanceCheck(caller(), from, to, id, amount, dataOffset)
+      }
+
+      function _safeBatchTransferFrom() {
+          let from := decodeAsAddress(0)
+          let to := decodeAsAddress(1)
+          let idsOffset := decodeAsUint(2)
+          let amountsOffset := decodeAsUint(3)
+          let dataOffset := decodeAsUint(4)
+
+          let idsStartPos := add(idsOffset, 0x04)
+          let idsLength := calldataload(idsStartPos)
+
+          let amountsStartPos := add(amountsOffset, 0x04)
+          let amountsLength := calldataload(amountsStartPos)
+
+          let dataStartPos := add(dataOffset, 0x04)
+
+          notZeroAddress(to)
+          require(eq(idsLength, amountsLength))
+
+          let idPos := idsStartPos
+          let amountPos := amountsStartPos
+
+          for { let i := 0 } lt(i, idsLength) { i := add(i, 0x01) } {
+              idPos := add(idPos, 0x20) // add 0x20 to get first id after length
+              amountPos := add(amountPos, 0x20) // add 0x20 to get first amount after length
+
+              subBalanceOf(
+                from,
+                calldataload(idPos),
+                calldataload(amountPos)
+              )
+
+              addBalanceOf(
+                to,
+                calldataload(idPos),
+                calldataload(amountPos)
+              )
+          }
+
+          emitTransferBatch(caller(), from, to)
+
+          _doBatchSafeTransferAcceptanceCheck(caller(), from, to, idsStartPos, idsLength, amountsLength)
       }
 
       function _mint(to, id, amount, dataOffset) {
@@ -143,7 +194,7 @@ object "ERC1155" {
       function _batchBurn() {
           let from := decodeAsAddress(0)
           notZeroAddress(from)
-          
+
           let idsOffset := decodeAsUint(1)
           let amountsOffset := decodeAsUint(2)
 

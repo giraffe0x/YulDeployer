@@ -351,60 +351,60 @@ contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
         assertEq(token.balanceOf(address(0xBEEF), 1341), 250);
     }
 
-    // function testSafeBatchTransferFromToERC1155Recipient() public {
-    //     address from = address(0xABCD);
+    function testSafeBatchTransferFromToERC1155Recipient() public {
+        address from = address(0xABCD);
 
-    //     ERC1155Recipient to = new ERC1155Recipient();
+        ERC1155Recipient to = new ERC1155Recipient();
 
-    //     uint256[] memory ids = new uint256[](5);
-    //     ids[0] = 1337;
-    //     ids[1] = 1338;
-    //     ids[2] = 1339;
-    //     ids[3] = 1340;
-    //     ids[4] = 1341;
+        uint256[] memory ids = new uint256[](5);
+        ids[0] = 1337;
+        ids[1] = 1338;
+        ids[2] = 1339;
+        ids[3] = 1340;
+        ids[4] = 1341;
 
-    //     uint256[] memory mintAmounts = new uint256[](5);
-    //     mintAmounts[0] = 100;
-    //     mintAmounts[1] = 200;
-    //     mintAmounts[2] = 300;
-    //     mintAmounts[3] = 400;
-    //     mintAmounts[4] = 500;
+        uint256[] memory mintAmounts = new uint256[](5);
+        mintAmounts[0] = 100;
+        mintAmounts[1] = 200;
+        mintAmounts[2] = 300;
+        mintAmounts[3] = 400;
+        mintAmounts[4] = 500;
 
-    //     uint256[] memory transferAmounts = new uint256[](5);
-    //     transferAmounts[0] = 50;
-    //     transferAmounts[1] = 100;
-    //     transferAmounts[2] = 150;
-    //     transferAmounts[3] = 200;
-    //     transferAmounts[4] = 250;
+        uint256[] memory transferAmounts = new uint256[](5);
+        transferAmounts[0] = 50;
+        transferAmounts[1] = 100;
+        transferAmounts[2] = 150;
+        transferAmounts[3] = 200;
+        transferAmounts[4] = 250;
 
-    //     token.batchMint(from, ids, mintAmounts, "");
+        token.batchMint(from, ids, mintAmounts, "");
 
-    //     hevm.prank(from);
-    //     token.setApprovalForAll(address(this), true);
+        hevm.prank(from);
+        token.setApprovalForAll(address(this), true);
 
-    //     token.safeBatchTransferFrom(from, address(to), ids, transferAmounts, "testing 123");
+        token.safeBatchTransferFrom(from, address(to), ids, transferAmounts, "testing 123");
 
-    //     assertEq(to.batchOperator(), address(this));
-    //     assertEq(to.batchFrom(), from);
-    //     assertUintArrayEq(to.batchIds(), ids);
-    //     assertUintArrayEq(to.batchAmounts(), transferAmounts);
-    //     assertBytesEq(to.batchData(), "testing 123");
+        assertEq(to.batchOperator(), address(this));
+        assertEq(to.batchFrom(), from);
+        assertUintArrayEq(to.batchIds(), ids);
+        assertUintArrayEq(to.batchAmounts(), transferAmounts);
+        assertBytesEq(to.batchData(), "testing 123");
 
-    //     assertEq(token.balanceOf(from, 1337), 50);
-    //     assertEq(token.balanceOf(address(to), 1337), 50);
+        assertEq(token.balanceOf(from, 1337), 50);
+        assertEq(token.balanceOf(address(to), 1337), 50);
 
-    //     assertEq(token.balanceOf(from, 1338), 100);
-    //     assertEq(token.balanceOf(address(to), 1338), 100);
+        assertEq(token.balanceOf(from, 1338), 100);
+        assertEq(token.balanceOf(address(to), 1338), 100);
 
-    //     assertEq(token.balanceOf(from, 1339), 150);
-    //     assertEq(token.balanceOf(address(to), 1339), 150);
+        assertEq(token.balanceOf(from, 1339), 150);
+        assertEq(token.balanceOf(address(to), 1339), 150);
 
-    //     assertEq(token.balanceOf(from, 1340), 200);
-    //     assertEq(token.balanceOf(address(to), 1340), 200);
+        assertEq(token.balanceOf(from, 1340), 200);
+        assertEq(token.balanceOf(address(to), 1340), 200);
 
-    //     assertEq(token.balanceOf(from, 1341), 250);
-    //     assertEq(token.balanceOf(address(to), 1341), 250);
-    // }
+        assertEq(token.balanceOf(from, 1341), 250);
+        assertEq(token.balanceOf(address(to), 1341), 250);
+    }
 
     // function testBatchBalanceOf() public {
     //     address[] memory tos = new address[](5);
