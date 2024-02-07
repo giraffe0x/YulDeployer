@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
-// import {DSTestPlus} from "./utils/DSTestPlus.sol";
-// import {DSInvariantTest} from "./utils/DSInvariantTest.sol";
+import {DSTestPlus} from "./utils/DSTestPlus.sol";
+import {DSInvariantTest} from "./utils/DSInvariantTest.sol";
 
 import "forge-std/Test.sol";
 import "deploy-yul/BytecodeDeployer.sol";
@@ -11,61 +11,61 @@ import "forge-std/console.sol";
 
 // import {ERC1155} from "../yul/ERC1155.yul";
 
-// import {ERC1155TokenReceiver} from "../tokens/ERC1155.sol";
+import {ERC1155TokenReceiver} from "../src/tokens/ERC1155.sol";
 
-// contract ERC1155Recipient is ERC1155TokenReceiver {
-//     address public operator;
-//     address public from;
-//     uint256 public id;
-//     uint256 public amount;
-//     bytes public mintData;
+contract ERC1155Recipient is ERC1155TokenReceiver {
+    address public operator;
+    address public from;
+    uint256 public id;
+    uint256 public amount;
+    bytes public mintData;
 
-//     function onERC1155Received(
-//         address _operator,
-//         address _from,
-//         uint256 _id,
-//         uint256 _amount,
-//         bytes calldata _data
-//     ) public override returns (bytes4) {
-//         operator = _operator;
-//         from = _from;
-//         id = _id;
-//         amount = _amount;
-//         mintData = _data;
+    function onERC1155Received(
+        address _operator,
+        address _from,
+        uint256 _id,
+        uint256 _amount,
+        bytes calldata _data
+    ) public override returns (bytes4) {
+        operator = _operator;
+        from = _from;
+        id = _id;
+        amount = _amount;
+        mintData = _data;
 
-//         return ERC1155TokenReceiver.onERC1155Received.selector;
-//     }
+        return ERC1155TokenReceiver.onERC1155Received.selector;
+    }
 
-//     address public batchOperator;
-//     address public batchFrom;
-//     uint256[] internal _batchIds;
-//     uint256[] internal _batchAmounts;
-//     bytes public batchData;
+    address public batchOperator;
+    address public batchFrom;
+    uint256[] internal _batchIds;
+    uint256[] internal _batchAmounts;
+    bytes public batchData;
 
-//     function batchIds() external view returns (uint256[] memory) {
-//         return _batchIds;
-//     }
+    function batchIds() external view returns (uint256[] memory) {
+        return _batchIds;
+    }
 
-//     function batchAmounts() external view returns (uint256[] memory) {
-//         return _batchAmounts;
-//     }
+    function batchAmounts() external view returns (uint256[] memory) {
+        return _batchAmounts;
+    }
 
-//     function onERC1155BatchReceived(
-//         address _operator,
-//         address _from,
-//         uint256[] calldata _ids,
-//         uint256[] calldata _amounts,
-//         bytes calldata _data
-//     ) external override returns (bytes4) {
-//         batchOperator = _operator;
-//         batchFrom = _from;
-//         _batchIds = _ids;
-//         _batchAmounts = _amounts;
-//         batchData = _data;
+    function onERC1155BatchReceived(
+        address _operator,
+        address _from,
+        uint256[] calldata _ids,
+        uint256[] calldata _amounts,
+        bytes calldata _data
+    ) external override returns (bytes4) {
+        batchOperator = _operator;
+        batchFrom = _from;
+        _batchIds = _ids;
+        _batchAmounts = _amounts;
+        batchData = _data;
 
-//         return ERC1155TokenReceiver.onERC1155BatchReceived.selector;
-//     }
-// }
+        return ERC1155TokenReceiver.onERC1155BatchReceived.selector;
+    }
+}
 
 // contract RevertingERC1155Recipient is ERC1155TokenReceiver {
 //     function onERC1155Received(
@@ -126,7 +126,7 @@ interface IERC1155 {
     // function balanceOfBatch(address[] calldata owners, uint256[] calldata ids) external view returns (uint256[] memory);
 }
 
-contract ERC1155Test is Test {
+contract ERC1155Test is DSTestPlus, DSInvariantTest {
     IERC1155 token;
 
     mapping(address => mapping(uint256 => uint256)) public userMintAmounts;
@@ -144,18 +144,18 @@ contract ERC1155Test is Test {
         assertEq(token.balanceOf(address(0xBEEF), 1337), 1);
     }
 
-    // function testMintToERC1155Recipient() public {
-    //     ERC1155Recipient to = new ERC1155Recipient();
+    function testMintToERC1155Recipient() public {
+        ERC1155Recipient to = new ERC1155Recipient();
 
-    //     token.mint(address(to), 1337, 1, "testing 123");
+        token.mint(address(to), 1337, 1, "testing 123");
 
-    //     assertEq(token.balanceOf(address(to), 1337), 1);
+        assertEq(token.balanceOf(address(to), 1337), 1);
 
-    //     assertEq(to.operator(), address(this));
-    //     assertEq(to.from(), address(0));
-    //     assertEq(to.id(), 1337);
-    //     assertBytesEq(to.mintData(), "testing 123");
-    // }
+        assertEq(to.operator(), address(this));
+        assertEq(to.from(), address(0));
+        assertEq(to.id(), 1337);
+        assertBytesEq(to.mintData(), "testing 123");
+    }
 
     // function testBatchMintToEOA() public {
     //     uint256[] memory ids = new uint256[](5);

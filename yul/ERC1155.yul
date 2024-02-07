@@ -20,7 +20,7 @@ object "ERC1155" {
           // TODO add only owner check?
 
           // mint to, id, amount, data
-          mint(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2), decodeAsBytes(3))
+          mint(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2), decodeAsUint(3))
           returnEmpty()
       }
 
@@ -29,33 +29,99 @@ object "ERC1155" {
           returnUint(balanceOf(decodeAsAddress(0), decodeAsUint(1)))
       }
 
-
-
       //? Is this an internal function? Yes because it's not in the dispatcher
-      function mint(to, id, amount, _data) {
+      function mint(to, id, amount, dataOffset) {
           // Check that it is not to address(0)
           notZeroAddress(to)
           // Add to balanceOf, checking for overflow
           addBalanceOf(to, id, amount)
           // Emit Transfer event
-          emitTransferSingle(0x00, to, id, amount, _data)
+          emitTransferSingle(caller(), 0x0, to, id, amount)
           // If the recipient is a contract, we call onERC1155Received
-
-          // // Check if recipient is a contract by code length > 0
-          // if isContract(to) {
-          //     // Call to with onERC1155Received and expect return data to be onERC1155Received.selector
-          //     // 0xf23a6e61 is the selector for onERC1155Received(address,address,uint256,uint256,bytes)
-          //     // opcode CALL (gas, address, value, argOffset, argSize, retOffset, retSize)
-          //     to.call(0xf23a6e61,)
-          //     // If not then revert the transaction
-          // }
+          _doSafeTransferAcceptanceCheck(caller(), 0x0, to, id, amount)
       }
+
+
+      /* --- safe transfer --- */
+
+      function _doSafeTransferAcceptanceCheck(operator, from, to, id, amount) {
+          if isContract(to) {
+              let onERC1155ReceivedSelector := 0xf23a6e6100000000000000000000000000000000000000000000000000000000
+
+              let dataOffset := calldataload(0x64) // would return 0x80 (4th word of calldata)
+              let dataStartPos := add(dataOffset, 0x04) // need to add 0x04 to skip the selector
+
+              mstore(0, onERC1155ReceivedSelector)
+              mstore(0x04, operator)
+              mstore(0x24, from)
+              mstore(0x44, id)
+              mstore(0x64, amount)
+              // store bytes starting position - 0xa0 = 5th word?
+              mstore(0x84, 0xa0)
+              // calldatacopy(destOffset, offset, size) ; 0xa4 is the next area in memory to write to
+              calldatacopy(0xa4, dataStartPos, sub(calldatasize(), dataStartPos))
+
+              let success := call(
+                  gas(),
+                  to,
+                  0, // value
+                  0, // argOffset
+                  add(calldatasize(), 0x20), // for additional operator arg
+                  0x00, // retOffset
+                  0x04 // retSize
+              )
+
+              if iszero(success) {
+                  revert(0x00, 0x00)
+              }
+
+              // Require return data to be equal to onERC1155Received.selector (0xf23a6e61)
+              returndatacopy(0x00, 0x00, 0x20)
+              require(eq(mload(0x00), onERC1155ReceivedSelector))
+          }
+      }
+
+      // 2nd version of _doSafeTransferAcceptanceCheck
+      // function _doSafeTransferAcceptanceCheck(operator, from, to, id, amount) {
+      //     if isContract(to) {
+      //         let onERC1155ReceivedSelector := 0xf23a6e61
+      //         let dataOffset := calldataload(0x64)
+      //         let dataStartPos := add(dataOffset, 0x04)
+
+      //         // let memPtr := mload(0x40)
+      //         mstore(0, onERC1155ReceivedSelector) // pads left with zeroes
+      //         mstore(0x20, operator)
+      //         mstore(0x40, from)
+      //         mstore(0x60, id)
+      //         mstore(0x80, amount)
+      //         mstore(0xa0, 0xa0)
+
+      //         calldatacopy(0xc0, dataStartPos, sub(calldatasize(), dataStartPos))
+
+      //         let success := call(
+      //             gas(),
+      //             to,
+      //             0, // value
+      //             28, // argOffset
+      //             add(calldatasize(), 0x20), // argSize
+      //             0x00, // retOffset
+      //             0x04 // retSize
+      //         )
+
+      //         if iszero(success) {
+      //             revert(0x00, 0x00)
+      //         }
+
+      //         // Require return data to be equal to onERC1155Received.selector (0xf23a6e61)
+      //         returndatacopy(0x00, 0x00, 0x20)
+      //         require(eq(mload(0x00), 0xf23a6e6100000000000000000000000000000000000000000000000000000000))
+      //     }
+      // }
 
       /* --- storage layout --- */
 
       function balanceOfSlot() -> slot { slot := 0 }
       function allowanceSlot() -> slot { slot := 1 }
-
 
       /* --- storage access functions --- */
 
@@ -107,12 +173,6 @@ object "ERC1155" {
           // We don't trust the input data
           // We check a is a valid uint160 value
           require(lt(a, 0xffffffffffffffffffffffffffffffffffffffff))
-      }
-
-      function decodeAsBytes(offset) -> b {
-          let pos := add(0x04, mul(offset, 0x20))
-          // TODO check if any validation necessary
-          b := calldataload(pos)
       }
 
       /* --- calldata encoding functions --- */
