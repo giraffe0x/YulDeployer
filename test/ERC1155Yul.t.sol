@@ -124,6 +124,11 @@ interface IERC1155 {
     function safeBatchTransferFrom(address from, address to, uint256[] calldata ids, uint256[] calldata amounts, bytes calldata data) external;
     function balanceOf(address owner, uint256 id) external view returns (uint256);
     function balanceOfBatch(address[] calldata owners, uint256[] calldata ids) external view returns (uint256[] memory);
+
+    event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value);
+    event TransferBatch(address indexed operator, address indexed from, address indexed to, uint256[] ids, uint256[] values);
+    event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
+    event URI(string value, uint256 indexed id);
 }
 
 contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
@@ -258,6 +263,60 @@ contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
         token.setApprovalForAll(address(0xBEEF), true);
 
         assertTrue(token.isApprovedForAll(address(this), address(0xBEEF)));
+    }
+
+    function testEmitTransferSingle() public {
+        hevm.expectEmit(true, true, true, true);
+
+        emit IERC1155.TransferSingle(
+            address(this),
+            address(0),
+            address(0xBEEF),
+            1337,
+            100);
+
+        token.mint(address(0xBEEF), 1337, 100, "");
+
+        address to = address(0xABCD);
+
+        hevm.expectEmit(true, true, true, true);
+
+        emit IERC1155.TransferSingle(
+            address(0xBEEF),
+            address(0xBEEF),
+            to,
+            1337,
+            70);
+
+        hevm.prank(address(0xBEEF));
+        token.safeTransferFrom(address(0xBEEF), to, 1337, 70, "");
+    }
+
+    function testEmitTransferBatch() public {
+        uint256[] memory ids = new uint256[](5);
+        ids[0] = 1337;
+        ids[1] = 1338;
+        ids[2] = 1339;
+        ids[3] = 1340;
+        ids[4] = 1341;
+
+        uint256[] memory amounts = new uint256[](5);
+        amounts[0] = 100;
+        amounts[1] = 200;
+        amounts[2] = 300;
+        amounts[3] = 400;
+        amounts[4] = 500;
+
+        hevm.expectEmit(true, true, true, true);
+
+        emit IERC1155.TransferBatch(
+            address(this),
+            address(0),
+            address(0xBEEF),
+            ids,
+            amounts);
+
+        token.batchMint(address(0xBEEF), ids, amounts, "");
     }
 
     function testSafeTransferFromToEOA() public {

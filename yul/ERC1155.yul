@@ -157,7 +157,7 @@ object "ERC1155" {
               )
           }
 
-          emitTransferBatch(caller(), from, to)
+          emitTransferBatch(caller(), from, to, idsStartPos, idsLength, amountsStartPos, amountsLength)
 
           _doBatchSafeTransferAcceptanceCheck(caller(), from, to, idsStartPos, idsLength, amountsLength)
       }
@@ -204,7 +204,7 @@ object "ERC1155" {
               )
           }
 
-          emitTransferBatch(caller(), 0x0, to)
+          emitTransferBatch(caller(), 0x0, to, idsStartPos, idsLength, amountsStartPos, amountsLength)
 
           _doBatchSafeTransferAcceptanceCheck(caller(), 0x0, to, idsStartPos, idsLength, amountsLength)
       }
@@ -248,7 +248,7 @@ object "ERC1155" {
               )
           }
 
-          emitTransferBatch(caller(), from, 0x0)
+          emitTransferBatch(caller(), from, 0x0, idsStartPos, idsLength, amountsStartPos, amountsLength)
       }
 
       function _doBatchSafeTransferAcceptanceCheck(operator, from, to, idsStartPos, idsLength, amountsLength) {
@@ -401,8 +401,6 @@ object "ERC1155" {
           )
       }
 
-
-
       /* --- calldata decoding/sanitization functions --- */
 
       function decodeAsUint(offset) -> u {
@@ -514,13 +512,16 @@ object "ERC1155" {
       // calldatacopy(0xa4, dataStartPos, sub(calldatasize(), dataStartPos))
 
       //TODO test correct event emission
-      function emitTransferBatch(operator, from, to) {
-          // how to dynamically load calldata into memory? calldatacopy?
-          calldatacopy(0x00, 0x24, sub(calldatasize(), 0x24)) // 0x24 to exclude selector and address arg
+      function emitTransferBatch(operator, from, to, idsStartPos, idsLength, amountsStartPos, amountsLength) {
+          mstore(0, 0x40) // offset for ids
+          mstore(0x20, add(0x60, mul(idsLength, 0x20))) // offset for amounts
+          calldatacopy(0x40, idsStartPos, mul(add(idsLength, 0x01), 0x20)) // copy ids length and array elements. +1 to include length
+          calldatacopy(add(0x40, mul(add(idsLength, 0x01), 0x20)), amountsStartPos, mul(add(amountsLength, 0x01), 0x20)) // copy amounts length and array elements. +1 to include length
+          let eventLength := add(add(idsLength, amountsLength), 4)
 
           log4(
               0x00, // Memory location where non-indexed args are stored
-              sub(calldatasize(), 0x24),
+              mul(eventLength, 0x20),
               0x4a39dc06d4c0dbc64b70af90fd698a233a518aa5d07e595d983b8c0526c8f7fb /* keccak "TransferBatch(address,address,address,uint256[],uint256[])" */,
               operator, // indexed arg
               from, // indexed arg
