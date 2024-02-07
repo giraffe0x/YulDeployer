@@ -40,12 +40,32 @@ object "ERC1155" {
           returnEmpty()
       }
 
+      case 0xf242432a /* "safeTransferFrom(address,address,uint,uint,bytes)" */ {
+          _safeTransferFrom(decodeAsAddress(0), decodeAsAddress(1), decodeAsUint(2), decodeAsUint(3), decodeAsUint(4))
+          returnEmpty()
+      }
+
       // View functions
       case 0x00fdd58e /* "balanceOf(address,uint256)" */ {
           returnUint(balanceOf(decodeAsAddress(0), decodeAsUint(1)))
       }
 
       // Internal functions
+
+      function _safeTransferFrom(from, to, id, amount, dataOffset) {
+          // Check that caller is msg.sender or is approved for all
+          requireOr(eq(caller(), from), isApprovedForAll(from, caller()))
+          // Check that it is not to address(0)
+          notZeroAddress(to)
+          // Sub from balanceOf, checking for underflow
+          subBalanceOf(from, id, amount)
+          // Add to balanceOf, checking for overflow
+          addBalanceOf(to, id, amount)
+          // Emit Transfer event
+          emitTransferSingle(caller(), from, to, id, amount)
+          // If the recipient is a contract, we call onERC1155Received
+          _doSafeTransferAcceptanceCheck(caller(), from, to, id, amount, dataOffset)
+      }
 
       function _mint(to, id, amount, dataOffset) {
           // Check that it is not to address(0)
@@ -55,33 +75,37 @@ object "ERC1155" {
           // Emit Transfer event
           emitTransferSingle(caller(), 0x0, to, id, amount)
           // If the recipient is a contract, we call onERC1155Received
-          _doSafeTransferAcceptanceCheck(caller(), 0x0, to, id, amount)
+          _doSafeTransferAcceptanceCheck(caller(), 0x0, to, id, amount, dataOffset)
       }
 
       function _batchMint() {
           let to := decodeAsAddress(0)
-          let idsOffset := decodeAsUint(1)
+          let idsOffset := decodeAsUint(1) // reads what's at calldata 0x24
           let amountsOffset := decodeAsUint(2)
           let dataOffset := decodeAsUint(3)
-          let idsLength := calldataload(add(idsOffset, 0x04))
-          let idsStart := add(idsOffset, 0x24)
-          let amountsLength := calldataload(add(amountsOffset, 0x04))
-          let amountsStart := add(amountsOffset, 0x24)
-          let dataStart := add(dataOffset, 0x04)
+
+          let idsStartPos := add(idsOffset, 0x04)
+          let idsLength := calldataload(idsStartPos)
+
+          let amountsStartPos := add(amountsOffset, 0x04)
+          let amountsLength := calldataload(amountsStartPos)
+
+          let dataStartPos := add(dataOffset, 0x04)
 
           notZeroAddress(to)
-          // Check that length of ids and amounts is the same
           require(eq(idsLength, amountsLength))
 
           for { let i := 0 } lt(i, idsLength) { i := add(i, 0x01) } {
               addBalanceOf(
                 to,
-                calldataload(add(idsStart, mul(i, 0x20))),
-                calldataload(add(amountsStart, mul(i, 0x20)))
+                calldataload(add(idsStartPos, mul(i, 0x20))),
+                calldataload(add(amountsStartPos, mul(i, 0x20)))
               )
           }
 
           emitTransferBatch(caller(), 0x0, to)
+
+          _doBatchSafeTransferAcceptanceCheck(caller(), 0x0, to, dataOffset, dataStartPos)
       }
 
       function _burn(from, id, amount) {
@@ -94,11 +118,44 @@ object "ERC1155" {
           emitTransferSingle(caller(), from, 0x0, id, amount)
       }
 
-      function _doSafeTransferAcceptanceCheck(operator, from, to, id, amount) {
+      function _doBatchSafeTransferAcceptanceCheck(operator, from, to, dataOffset, dataStartPos) {
+          if isContract(to) {
+              let onERC1155BatchReceivedSelector := 0xbc197c8100000000000000000000000000000000000000000000000000000000
+
+              let idsAmountsLength := sub(calldatasize(), 0x24)
+
+              mstore(0, onERC1155BatchReceivedSelector)
+              mstore(0x04, operator)
+              mstore(0x24, from)
+              calldatacopy(0x44, 0x24, idsAmountsLength) // copy ids and amounts
+              mstore(add(0x44, idsAmountsLength), dataOffset) // store bytes starting position
+              calldatacopy(add(0x64, idsAmountsLength), dataStartPos, sub(calldatasize(), dataStartPos)) // copy data
+
+              let success := call(
+                  gas(),
+                  to,
+                  0, // value
+                  0, // argOffset
+                  add(calldatasize(), 0x20), // for additional operator arg
+                  0x00, // retOffset
+                  0x04 // retSize
+              )
+
+              if iszero(success) {
+                  revert(0x00, 0x00)
+              }
+
+              // Require return data to be equal to onERC1155Received.selector (0xf23a6e61)
+              returndatacopy(0x00, 0x00, 0x20)
+              require(eq(mload(0x00), onERC1155BatchReceivedSelector))
+          }
+      }
+
+      function _doSafeTransferAcceptanceCheck(operator, from, to, id, amount, dataOffset) {
           if isContract(to) {
               let onERC1155ReceivedSelector := 0xf23a6e6100000000000000000000000000000000000000000000000000000000
 
-              let dataOffset := calldataload(0x64) // would return 0x80 (4th word of calldata)
+              // let dataOffset := calldataload(0x64) // would return 0x80 (4th word of calldata)
               let dataStartPos := add(dataOffset, 0x04) // need to add 0x04 to skip the selector
 
               mstore(0, onERC1155ReceivedSelector)
@@ -271,8 +328,20 @@ object "ERC1155" {
       //     // TODO why no need for require?
       // }
 
+      function isApprovedForAll(f, c) -> a {
+          a := sload(getNestedMappingValuePos(allowanceSlot(), f, c))
+      }
+
       function require(condition) {
           if iszero(condition) { revert(0x00, 0x00) }
+      }
+
+      function requireOr(condition1, condition2) {
+          if iszero(condition1) {
+             if iszero(condition2) {
+               revert(0x00, 0x00)
+             }
+           }
       }
 
       function notZeroAddress(a) {
@@ -312,6 +381,7 @@ object "ERC1155" {
 
       // calldatacopy(0xa4, dataStartPos, sub(calldatasize(), dataStartPos))
 
+      //TODO test correct event emission
       function emitTransferBatch(operator, from, to) {
           // how to dynamically load calldata into memory? calldatacopy?
           calldatacopy(0x00, 0x24, sub(calldatasize(), 0x24)) // 0x24 to exclude selector and address arg
