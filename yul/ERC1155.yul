@@ -40,6 +40,12 @@ object "ERC1155" {
           returnEmpty()
       }
 
+      case 0xa22cb465 /* "setApprovalForAll(address,bool)" */ {
+          // setApprovalForAll operator, approved
+          sstore(getNestedMappingValuePos(allowanceSlot(), caller(), decodeAsAddress(0)), decodeAsUint(1))
+          returnEmpty()
+      }
+
       case 0xf242432a /* "safeTransferFrom(address,address,uint,uint,bytes)" */ {
           _safeTransferFrom(decodeAsAddress(0), decodeAsAddress(1), decodeAsUint(2), decodeAsUint(3), decodeAsUint(4))
           returnEmpty()
@@ -48,6 +54,10 @@ object "ERC1155" {
       // View functions
       case 0x00fdd58e /* "balanceOf(address,uint256)" */ {
           returnUint(balanceOf(decodeAsAddress(0), decodeAsUint(1)))
+      }
+
+      case 0xe985e9c5 /* "isApprovedForAll(address,address)" */ {
+          returnUint(isApprovedForAll(decodeAsAddress(0), decodeAsAddress(1)))
       }
 
       // Internal functions

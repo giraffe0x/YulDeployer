@@ -254,11 +254,11 @@ contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
     //     assertEq(token.balanceOf(address(0xBEEF), 1341), 250);
     // }
 
-    // function testApproveAll() public {
-    //     token.setApprovalForAll(address(0xBEEF), true);
+    function testApproveAll() public {
+        token.setApprovalForAll(address(0xBEEF), true);
 
-    //     assertTrue(token.isApprovedForAll(address(this), address(0xBEEF)));
-    // }
+        assertTrue(token.isApprovedForAll(address(this), address(0xBEEF)));
+    }
 
     function testSafeTransferFromToEOA() public {
         address from = address(0xABCD);
@@ -472,7 +472,7 @@ contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
         address from = address(0xABCD);
 
         token.mint(from, 1337, 100, "");
-        
+
         token.safeTransferFrom(from, address(0xBEEF), 1337, 100, "");
     }
 
