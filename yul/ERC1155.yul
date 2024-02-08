@@ -65,7 +65,7 @@ object "ERC1155" {
       }
 
       // View functions
-      case 
+
 
       case 0x00fdd58e /* "balanceOf(address,uint256)" */ {
           returnUint(balanceOf(decodeAsAddress(0), decodeAsUint(1)))
@@ -491,15 +491,6 @@ object "ERC1155" {
 
       // address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value
       function emitTransferSingle(operator, from, to, id, value) {
-          // To log an event we must abi.encode the non indexed args in the data entry
-          // In t1 we push the event.
-          // Then add the bytes32 value or keccak256 hash of each indexed arg in a topic
-          //
-          // example: emit Transfer(address indexed from, address indexed to, uint256 value)
-          // data: value in memory
-          // t1: keccak256("Transfer(address,address,uint256)")
-          // t2: from
-          // t3: to
           mstore(0x00, id)
           mstore(0x20, value)
           log4(
@@ -512,9 +503,6 @@ object "ERC1155" {
           )
       }
 
-      // calldatacopy(0xa4, dataStartPos, sub(calldatasize(), dataStartPos))
-
-      //TODO test correct event emission
       function emitTransferBatch(operator, from, to, idsStartPos, idsLength, amountsStartPos, amountsLength) {
           mstore(0, 0x40) // offset for ids
           mstore(0x20, add(0x60, mul(idsLength, 0x20))) // offset for amounts
