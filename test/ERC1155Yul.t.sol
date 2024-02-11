@@ -114,6 +114,7 @@ contract WrongReturnDataERC1155Recipient is ERC1155TokenReceiver {
 contract NonERC1155Recipient {}
 
 interface IERC1155 {
+    function setURI(string calldata newuri) external;
     function mint(address to, uint256 id, uint256 amount, bytes calldata data) external;
     function batchMint(address to, uint256[] calldata ids, uint256[] calldata amounts, bytes calldata data) external;
     function burn(address from, uint256 id, uint256 amount) external;
@@ -124,6 +125,7 @@ interface IERC1155 {
     function safeBatchTransferFrom(address from, address to, uint256[] calldata ids, uint256[] calldata amounts, bytes calldata data) external;
     function balanceOf(address owner, uint256 id) external view returns (uint256);
     function balanceOfBatch(address[] calldata owners, uint256[] calldata ids) external view returns (uint256[] memory);
+    function uri(uint256 id) external view returns (string memory);
 
     event TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value);
     event TransferBatch(address indexed operator, address indexed from, address indexed to, uint256[] ids, uint256[] values);
@@ -141,6 +143,11 @@ contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
 
     function setUp() public {
         token = IERC1155(yulDeployer.deployContract("ERC1155"));
+    }
+
+    function testSetURI() public {
+        token.setURI("https://example.com/{id}.json");
+        // assertEq(token.uri(1337), "https://example.com/1337.json");
     }
 
     function testMintToEOA() public {

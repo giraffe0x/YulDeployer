@@ -17,55 +17,45 @@ object "ERC1155" {
 
       // External functions
       case 0x731133e9 /* "mint(address,uint256,uint256,bytes)" */ {
-          // TODO add only owner check?
           // mint to, id, amount, data
           _mint(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2), decodeAsUint(3))
-          returnEmpty()
       }
 
       case 0xb48ab8b6 /* "batchMint(address,uint[],uint[],bytes)" */ {
           _batchMint()
-          returnEmpty()
-      }
-
-      // case 0xb390c0ab /* "burn(uint256,uint256)" */ {
-      //     // burn msg.sender, id, amount
-      //     _burn(caller(), decodeAsUint(0), decodeAsUint(1))
-      //     returnEmpty()
-      // }
+        }
 
       case 0xf5298aca /* "burn(address,uint256,uint256)" */ {
           // burn from, id, amount
           _burn(decodeAsAddress(0), decodeAsUint(1), decodeAsUint(2))
-          returnEmpty()
       }
 
       case 0xf6eb127a /* "batchBurn(address,uint[],uint[])" */ {
           // burn from, ids, amounts
           _batchBurn()
-          returnEmpty()
       }
 
       case 0xa22cb465 /* "setApprovalForAll(address,bool)" */ {
           // setApprovalForAll operator, approved
           sstore(getNestedMappingValuePos(allowanceSlot(), caller(), decodeAsAddress(0)), decodeAsUint(1))
           emitApprovalForAll(caller(), decodeAsAddress(0), decodeAsUint(1))
-          returnEmpty()
       }
 
       case 0xf242432a /* "safeTransferFrom(address,address,uint,uint,bytes)" */ {
           _safeTransferFrom(decodeAsAddress(0), decodeAsAddress(1), decodeAsUint(2), decodeAsUint(3), decodeAsUint(4))
-          returnEmpty()
       }
 
       case 0x2eb2c2d6 /* "safeBatchTransferFrom(address,address,uint[],uint[],bytes)" */ {
           // safeBatchTransferFrom(from, to, ids, amounts, data)
           _safeBatchTransferFrom()
-          returnEmpty()
+      }
+
+      case 0x02fe5305 /* "setURI(string)" */ {
+          // setURI(uri)
+          _setUri()
       }
 
       // View functions
-
 
       case 0x00fdd58e /* "balanceOf(address,uint256)" */ {
           returnUint(balanceOf(decodeAsAddress(0), decodeAsUint(1)))
@@ -106,6 +96,34 @@ object "ERC1155" {
       }
 
       // Internal functions
+      function _setUri() {
+          let uriOffset := decodeAsUint(0)
+          let uriStartPos := add(uriOffset, 0x04)
+          let uriLength := calldataload(uriStartPos)
+
+          // Storage layout for strings: https://docs.soliditylang.org/en/v0.8.13/internals/layout_in_storage.html#bytes-and-string
+          // Expect URI to be longer than 31 bytes (long array)
+          // Main slot p stores length * 2 + 1
+          // Data stored in keccak256(p)
+
+          // Store new length
+          sstore(uri(), add(mul(uriLength, 2), 1))
+
+          // Get data position
+          mstore(0x00, uri())
+          let dataStartPos := keccak256(0x00, 0x20)
+
+          // Store data
+          // Increment i by 32 bytes to determine how many slots needed
+          // calldatasize sub 0x44 to only account for string data (excl length and offset)
+          let uriPos := uriStartPos
+          for { let i := 0 } lt(i, sub(calldatasize(), 0x44)) { i := add(i, 0x20) } {
+              uriPos := add(uriPos, 0x20)
+              sstore(dataStartPos, calldataload(uriPos))
+              dataStartPos := add(dataStartPos, 0x20)
+          }
+
+      }
 
       function _safeTransferFrom(from, to, id, amount, dataOffset) {
           // Check that caller is msg.sender or is approved for all
@@ -362,8 +380,9 @@ object "ERC1155" {
 
       /* --- storage layout --- */
 
-      function balanceOfSlot() -> slot { slot := 0 }
-      function allowanceSlot() -> slot { slot := 1 }
+      function uri() -> slot { slot := 0 }
+      function balanceOfSlot() -> slot { slot := 1 }
+      function allowanceSlot() -> slot { slot := 2 }
 
       /* --- storage access functions --- */
 
