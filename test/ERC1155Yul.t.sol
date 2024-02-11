@@ -146,8 +146,8 @@ contract ERC1155Test is DSTestPlus, ERC1155TokenReceiver {
     }
 
     function testSetURI() public {
-        token.setURI("https://example.com/{id}.json");
-        // assertEq(token.uri(1337), "https://example.com/1337.json");
+        token.setURI("https://example.com/id.json");
+        assertEq(token.uri(1337), "https://example.com/id.json");
     }
 
     function testMintToEOA() public {

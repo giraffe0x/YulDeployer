@@ -57,6 +57,10 @@ object "ERC1155" {
 
       // View functions
 
+      case 0x0e89341c /* "uri(uint256)" */ {
+          _returnUri(decodeAsUint(0))
+      }
+
       case 0x00fdd58e /* "balanceOf(address,uint256)" */ {
           returnUint(balanceOf(decodeAsAddress(0), decodeAsUint(1)))
       }
@@ -96,6 +100,31 @@ object "ERC1155" {
       }
 
       // Internal functions
+      function _returnUri(id) {
+          // Get data position
+          mstore(0x00, uri())
+          let dataStartPos := keccak256(0x00, 0x20)
+
+          // Retrieve URI length and store offsset and length in memory
+          let uriLength := sload(uri())
+          mstore(0x00, 0x20)
+          mstore(0x20, uriLength)
+
+          // Retrieve URI data and store in memory
+          let uriFragment
+          let bytesWritten := 0
+          for {} lt(bytesWritten, uriLength) {} {
+              uriFragment := sload(dataStartPos)
+              mstore(add(bytesWritten, 0x40), uriFragment) // 0x40 to account for offset + length
+              bytesWritten := add(bytesWritten, 0x20)
+              dataStartPos := add(dataStartPos, 0x20)
+          }
+          // Replace "id" in URI with id
+
+          // Return URI from memory
+          return (0, add(bytesWritten, 0x40))
+      }
+
       function _setUri() {
           let uriOffset := decodeAsUint(0)
           let uriStartPos := add(uriOffset, 0x04)
@@ -107,7 +136,7 @@ object "ERC1155" {
           // Data stored in keccak256(p)
 
           // Store new length
-          sstore(uri(), add(mul(uriLength, 2), 1))
+          sstore(uri(), uriLength)
 
           // Get data position
           mstore(0x00, uri())
@@ -123,6 +152,7 @@ object "ERC1155" {
               dataStartPos := add(dataStartPos, 0x20)
           }
 
+          emitUri()
       }
 
       function _safeTransferFrom(from, to, id, amount, dataOffset) {
@@ -548,6 +578,21 @@ object "ERC1155" {
               owner, // indexed arg
               operator // indexed arg
           )
+      }
+
+      function emitUri() {
+        mstore(0x00, uri())
+        let uriStartPos := keccak256(0x00, 0x20)
+
+        mstore(0x00, 0x20)
+        mstore(0x20, sload(uri()))
+        mstore(0x40, sload(uriStartPos))
+
+        log1(
+          0x00,
+          0x60,
+          0xd7b9f495fb5da7f0c66e212d2fe267ae13d0ee6ef2fd874520588dfcb1f9abba /* keccak "Uri(string)" */
+        )
       }
     }
   }
