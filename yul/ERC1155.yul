@@ -581,18 +581,18 @@ object "ERC1155" {
       }
 
       function emitUri() {
-        mstore(0x00, uri())
-        let uriStartPos := keccak256(0x00, 0x20)
+          mstore(0x00, uri())
+          let uriStartPos := keccak256(0x00, 0x20)
 
-        mstore(0x00, 0x20)
-        mstore(0x20, sload(uri()))
-        mstore(0x40, sload(uriStartPos))
+          mstore(0x00, 0x20)
+          mstore(0x20, sload(uri()))
+          mstore(0x40, sload(uriStartPos))
 
-        log1(
-          0x00,
-          0x60,
-          0xd7b9f495fb5da7f0c66e212d2fe267ae13d0ee6ef2fd874520588dfcb1f9abba /* keccak "Uri(string)" */
-        )
+          log1(
+            0x00,
+            0x60,
+            0xd7b9f495fb5da7f0c66e212d2fe267ae13d0ee6ef2fd874520588dfcb1f9abba /* keccak "Uri(string)" */
+          )
       }
     }
   }
